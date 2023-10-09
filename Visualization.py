@@ -97,7 +97,6 @@ model = load_model("converted_keras/keras_Model.h5", compile=False)
 # Load the labels
 class_names = open("converted_keras/labels.txt", "r").readlines()
 # CAMERA can be 0 or 1 based on default camera of your computer
-model_description()
 
 camera = cv2.VideoCapture(0)
 while True:
