@@ -6,8 +6,6 @@ from lucent.modelzoo import inceptionv1
 import copy
 
 
-# Define the number of classes for new task
-num_classes = 10
 train_data_path = 'Data\Train_data'
 test_data_path = 'Data\Test_data'
 
@@ -30,6 +28,16 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 best_accuracy = 0
 print(device)
 first_run = True
+best_butch = 0
+best_lr = 0
+
+# Extract number of classes
+classes = 'Data/Labels.txt' 
+num_classes = 0
+with open(classes, 'r') as file:
+    for line in file:
+        num_classes += 1
+
 # hyperparameters research
 for lr in [0.1, 0.01, 0.001]:
     for batch_size in [5, 10, 20, 40, 80]:
@@ -93,6 +101,8 @@ for lr in [0.1, 0.01, 0.001]:
         if(accuracy > best_accuracy):
             best_model = copy.deepcopy(best_with_this_hyperparams)
             best_accuracy = accuracy
+            best_lr = lr
+            best_batch = batch_size
 
 
 best_model.eval()
@@ -109,4 +119,16 @@ with torch.no_grad():
 # Calculate accuracy
 accuracy = 100 * correct / total
 print(f'Best accuracy: {accuracy:.2f}%')
+
+num_epochs = 5
+best_model.train()
+dataloader = torch.utils.data.DataLoader(eval_dataset, batch_size=batch_size, shuffle=True)
+for epoch in range(num_epochs):
+    for inputs, labels in dataloader:
+        inputs, labels = inputs.to(device), labels.to(device)
+        optimizer.zero_grad()
+        outputs = best_model(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
 torch.save(best_model.state_dict(), 'model/pretrained_model_weights.pth')

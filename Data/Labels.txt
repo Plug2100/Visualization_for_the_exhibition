@@ -4,7 +4,12 @@ Cola
 Cup
 Horse
 Pen
+Phone
+Pop Bottle
 Postcard
 Scissor
 Spider
 Toothbrush
+Wallet
+Watch
+Water Bottle

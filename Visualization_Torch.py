@@ -13,7 +13,7 @@ from lucent.misc.io import show
 import pandas
 import matplotlib.pyplot as plt
 
-num_classes = 10
+num_classes = 15
 image_size = 720 # Size of images (original, heatmap and act.layers)
 bright = 3.0 # How bright is the Heatmap
 alpha = 0.5  # Adjust the alpha value to control the intensity of the heatmap overlay
@@ -41,6 +41,7 @@ def generate_frames():
 
     # Load the labels
     class_labels = construct_subclass_group_dict()
+    num_classes = len(class_labels)
     # Disable scientific notation for clarity
 
     activation = {}
@@ -90,6 +91,7 @@ def generate_frames():
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
+    print(torch.__version__)
     # CAMERA 
     camera = cv2.VideoCapture(0)
     while True:
@@ -121,7 +123,8 @@ def generate_frames():
         # Receive answer from the model
         predicted_class = torch.argmax(prediction, dim=1).item()
         class_name = class_labels[predicted_class]
-        confidence_score = torch.nn.functional.softmax(prediction[0], dim=0)
+        #confidence_score = torch.nn.functional.softmax(prediction[0], dim=0)
+        confidence_score = prediction[0]
         confidence_score = confidence_score[predicted_class]
 
         # Building Heatmap
