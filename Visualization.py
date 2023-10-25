@@ -1,145 +1,94 @@
-from keras.models import load_model  # TensorFlow is required for Keras to work
-import keras
-from PIL import Image, ImageOps  # Install pillow instead of PIL
 import numpy as np
-import matplotlib.pyplot as plt
-import tensorflow as tf
+import torch
 import cv2
 from flask import Flask, Response, render_template
-import seaborn as sns
-
+import torchvision.transforms as transforms
+import torch
+import time
 
 app = Flask(__name__, template_folder='templates')
 
 
-def model_description(model):
-    print('DESCRIPTION OF THE MODEL:')
-    model.summary()
-    # Access the layers of the first sequential model (sequential_1)
-    sequential_1_layers = model.layers[0].layers
-    # Access the layers of the second sequential model (sequential_3)
-    sequential_3_layers = model.layers[1].layers
-    # Print the layers of the first sequential model (sequential_1)
-    print("Layers of sequential_1:")
-    for layer in sequential_1_layers:
-        print(layer.name)
-        if(layer.name == 'model1'):
-            print('Consist of:')
-            layer.summary()
-    #Print the layers of the second sequential model (sequential_3)
-    print("\nLayers of sequential_3:")
-    for layer in sequential_3_layers:
-       print(layer.name)
-
-
-def by_photo():
-    # Disable scientific notation for clarity
-    np.set_printoptions(suppress=True)
-    # Load the model
-    model = load_model("converted_keras/keras_Model.h5", compile=False)
-    # Load the labels
-    class_names = open("converted_keras/labels.txt", "r").readlines()
-    # Create the array of the right shape to feed into the keras model
-    # The 'length' or number of images you can put into the array is
-    # determined by the first position in the shape tuple, in this case 1
-    data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
-    # Replace this with the path to your image
-    image = Image.open("Data/Dog.jpg").convert("RGB")
-    # resizing the image to be at least 224x224 and then cropping from the center
-    size = (224, 224)
-    image = ImageOps.fit(image, size, Image.Resampling.LANCZOS)
-    # turn the image into a numpy array
-    image_array = np.asarray(image)
-    # Normalize the image
-    normalized_image_array = (image_array.astype(np.float32) / 127.5) - 1
-    # Load the image into the array
-    data[0] = normalized_image_array
-    # Predicts the model
-    prediction = model.predict(data)
-    index = np.argmax(prediction)
-    class_name = class_names[index]
-    confidence_score = prediction[0][index]
-    # Print prediction and confidence score
-    print("Class:", class_name[2:], end="")
-    print("Confidence Score:", confidence_score)
-    result_heatmap = CAM(model, size, data, index)
-    plt.imshow(image)
-    sns.heatmap(result_heatmap, cmap='jet', alpha=0.5)
-    plt.show()
-
-
-
-def CAM(model, size, data, index):
-    # A new modelg to extract map. If will affect the performance - somehow extract info from model during 1st inference
-    model_for_map_extraction = tf.keras.models.Model(inputs=model.get_layer('sequential_1').get_layer('model1').input, outputs= [model.get_layer('sequential_1').get_layer('model1').get_layer('out_relu').output])
-    map_for_heatmap = model_for_map_extraction(data)
-    layer_name = 'dense_Dense2'  # Last Dence layer out of 2
-    weights = model.get_layer('sequential_3').get_layer(layer_name).get_weights()
-    column_of_won_result = weights[0][:, index] # extract weights for correct label
-    layer_name = 'dense_Dense1'  #  First Dence layer out of 2
-    weights = model.get_layer('sequential_3').get_layer(layer_name).get_weights()[0]
-    weights_for_heatmap = np.dot(weights, column_of_won_result)
-    result_heatmap = map_for_heatmap * weights_for_heatmap
-    result_heatmap = tf.squeeze(result_heatmap)
-    result_heatmap = tf.maximum(result_heatmap, 0) / tf.math.reduce_max(result_heatmap) # Normalisation
-    result_heatmap = result_heatmap.numpy()
-    result_heatmap = np.sum(result_heatmap, axis=2)
-    result_heatmap = cv2.resize(result_heatmap, (size[0], size[1]))
-    return (result_heatmap) 
-
-
 
 def generate_frames():
-
     # Disable scientific notation for clarity
+    activation = {}
+    def get_activation(name):
+        def hook(model, input, output):
+            activation[name] = output.detach()
+        return hook
+
     np.set_printoptions(suppress=True)
     # Load the model
-    model = load_model("converted_keras/keras_Model.h5", compile=False)
-    # Load the labels
-    class_names = open("converted_keras/labels.txt", "r").readlines()
-    # CAMERA can be 0 or 1 based on default camera of your computer
+    model = torch.hub.load('pytorch/vision:v0.10.0', 'googlenet', pretrained=True)
+    model.eval()
 
+    # List of layers that are inputs to the pooling layer
+    model.inception5b.branch1.conv.register_forward_hook(get_activation('1st'))
+    model.inception5b.branch2[1].conv.register_forward_hook(get_activation('2nd'))
+    model.inception5b.branch3[1].conv.register_forward_hook(get_activation('3rd'))
+    model.inception5b.branch4[1].conv.register_forward_hook(get_activation('4th'))
+
+    # Define the image preprocessing transformations
+    preprocess = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        #TODO - Later change to the other type of norm
+    ])
+    # Load the labels
+    class_labels = []
+    with open("Data/imagenet-classes.txt") as f:
+        class_labels = [line.strip() for line in f.readlines()]
+
+    # CAMERA can be 0 or 1 based on default camera of your computer
     camera = cv2.VideoCapture(0)
     while True:
         # Grab the webcamera's image.
         ret, image = camera.read()
-        # Resize the raw image into (224-height,224-width) pixels
-        image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_AREA)
-        cv2.imwrite("Data/WebCam.jpg", image)
-        # Show the image in a window
-        image_backup = image
-        # Make the image a numpy array and reshape it to the models input shape.
-        image = np.asarray(image, dtype=np.float32).reshape(1, 224, 224, 3)
-        # Normalize the image array
-        image = (image / 127.5) - 1
-        # Predicts the model
-        prediction = model.predict(image)
-        index = np.argmax(prediction)
-        class_name = class_names[index]
-        confidence_score = prediction[0][index]
+        input_tensor = preprocess(image)
+        image = cv2.resize(image, (720, 720), interpolation=cv2.INTER_AREA)
 
-        result_heatmap = CAM(model, (224, 224), image, index)
+        # Add a batch dimension (GoogleNet expects batched input)
+        input_tensor = input_tensor.unsqueeze(0)
+        with torch.no_grad():
+            prediction = model(input_tensor)
+
+        concat_cn = torch.cat((activation['1st'], activation['2nd'], activation['3rd'], activation['4th']), dim=1)
+
+        predicted_class = torch.argmax(prediction, dim=1).item()
+        class_name = class_labels[predicted_class]
+        confidence_score = torch.nn.functional.softmax(prediction[0], dim=0)
+        confidence_score = confidence_score[predicted_class]
+        result_heatmap = concat_cn * model.fc.weight.data[predicted_class].view(1, 1024, 1, 1)
+        result_heatmap = result_heatmap.squeeze()
+        result_heatmap = torch.relu(result_heatmap) / torch.max(result_heatmap) # Normalisation
+        result_heatmap = result_heatmap.numpy()
+        result_heatmap = np.sum(result_heatmap, axis=0)
+        result_heatmap = cv2.resize(result_heatmap, (720, 720))
+
         result_heatmap = result_heatmap * 3.0 # make heatmap more bright
-        # print("Class:", class_name[2:], end="")
-        # print("Confidence Score:", str(np.round(confidence_score * 100))[:-2], "%")
         heatmap_colormap = cv2.applyColorMap(np.uint8(result_heatmap), cv2.COLORMAP_JET)
         alpha = 0.5  # Adjust the alpha value to control the intensity of the heatmap overlay
-        combined_image = cv2.addWeighted(image_backup, 1 - alpha, heatmap_colormap, alpha, 0)
-        combined_image = cv2.resize(combined_image, (300, 300))
-        image_backup = cv2.resize(image_backup, (300, 300))
-
-        white_image = np.ones((300, 200, 3), dtype=np.uint8) * 255  
+        combined_image = cv2.addWeighted(image, 1 - alpha, heatmap_colormap, alpha, 0)
+        
+        white_image = np.ones((720, 200, 3), dtype=np.uint8) * 255  
         # Concatenate the images horizontally
-        final_image = np.hstack((image_backup, white_image, combined_image))
+        final_image = np.hstack((image, white_image, combined_image))
         # Concatenate the images verticaly (to put the text)
-        white_image = np.ones((100, 800, 3), dtype=np.uint8) * 255 
+        white_image = np.ones((200, 720+720+200, 3), dtype=np.uint8) * 255 
         final_image = np.vstack((final_image, white_image))
-        text = f"Class: {class_name[2:-1]} | Confidence: {str(np.round(confidence_score * 100))[:-2]}%"
-        cv2.putText(final_image, text, (10, 350), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+        text = f"Class: {class_name} | Confidence: {str(np.round(confidence_score * 100))}%"
+        font_scale = 2.0
+        thickness = 2 
+        cv2.putText(final_image, text, (10, 800), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 255), thickness)
+
         ret, buffer = cv2.imencode('.jpg', final_image)
         frame = buffer.tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        
 
 @app.route('/')
 def index():
@@ -151,5 +100,3 @@ def video_feed1():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
