@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import cv2
 import torch.nn as nn
-from flask import Flask, Response, render_template
+from flask import Flask, Response, render_template, jsonify
 import torchvision.transforms as transforms
 import torch
 import time
@@ -23,7 +23,14 @@ font_scale = 2.0 # Font scale
 thickness = 2 # Font thickness
 text_place = (10, 800) # Coordinates for the text
 text_colour = (255, 0, 0) # Colour of the text
+predictions = []
 
+# Initialize as white image
+white_image = np.ones((image_size, space_between_pictures, 3), dtype=np.uint8) * 255
+camera_image = white_image
+most_activated_filter_image = white_image
+most_activated_filter_last_image = white_image
+heatmap_image = white_image
 app = Flask(__name__, template_folder='templates')
 
 def construct_subclass_group_dict():
@@ -34,7 +41,6 @@ def construct_subclass_group_dict():
         for line_number, line in enumerate(file, 0):
             labels[line_number] = line.strip()
     return labels
-
 
 
 def generate_frames():
@@ -122,10 +128,13 @@ def generate_frames():
 
         # Receive answer from the model
         predicted_class = torch.argmax(prediction, dim=1).item()
-        class_name = class_labels[predicted_class]
-        #confidence_score = torch.nn.functional.softmax(prediction[0], dim=0)
-        confidence_score = prediction[0]
-        confidence_score = confidence_score[predicted_class]
+        top3 = torch.topk(prediction.flatten(), 3).indices
+        class_name_1 = class_labels[top3[0].item()]
+        class_name_2 = class_labels[top3[1].item()]
+        class_name_3 = class_labels[top3[2].item()]
+        prediction_score_1 = prediction[0][top3[0].item()]
+        prediction_score_2 = prediction[0][top3[1].item()]
+        prediction_score_3 = prediction[0][top3[2].item()]
 
         # Building Heatmap
         result_heatmap = concat_cn * model.softmax2_pre_activation_matmul.weight.data[predicted_class].view(1, 1024, 1, 1) # 1024 - input to the last FC layer
@@ -140,32 +149,66 @@ def generate_frames():
         # Combine Heatmap and Actual Image
         combined_image = cv2.addWeighted(image, 1 - alpha, heatmap_colormap, alpha, 0)
 
-        # Building Final Image
-        # Add space between images
-        white_image = np.ones((image_size, space_between_pictures, 3), dtype=np.uint8) * 255  
-        # Concatenate the images horizontally
-        final_image = np.hstack((image, white_image, most_act_layer, white_image, most_act_layer_last, white_image, combined_image))
-        # Concatenate the images verticaly (to put the text)
-        white_image = np.ones((whitespace, final_image.shape[1], 3), dtype=np.uint8) * 255 
-        final_image = np.vstack((final_image, white_image))
-        # Text 
-        text = f"Class: {class_name} | Confidence: {str(np.round(confidence_score * 100))}%"
-        cv2.putText(final_image, text, text_place, cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_colour, thickness)
+        results = [f"{class_name_1} | {str(np.round(prediction_score_1.item() * 100, decimals=2))}%",
+                   f"{class_name_2} | {str(np.round(prediction_score_2.item() * 100, decimals=2))}%",
+                   f"{class_name_3} | {str(np.round(prediction_score_3.item() * 100, decimals=2))}%"]
+        set_predictions(results)
+        set_images(image, most_act_layer, most_act_layer_last, combined_image)
 
-        # Pass final image
-        ret, buffer = cv2.imencode('.jpg', final_image)
+        ret, buffer = cv2.imencode('.jpg', image)
         frame = buffer.tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-        
+
+def set_predictions(results):
+    global predictions
+    predictions = results
+
+def set_images(image, maf_image, mafl_image, heatmap):
+    global camera_image
+    camera_image = image
+    global most_activated_filter_image
+    most_activated_filter_image = maf_image
+    global most_activated_filter_last_image
+    most_activated_filter_last_image = mafl_image
+    global heatmap_image
+    heatmap_image = heatmap
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/video_feed1')
-def video_feed1():
+@app.route('/video_feed')
+def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/get_predictions', methods=['GET'])
+def get_predictions():
+    return jsonify(data=predictions)
+
+@app.route('/get_camera_image', methods=['GET'])
+def get_camera_image():
+    ret, buffer = cv2.imencode('.jpg', camera_image)
+    frame = buffer.tobytes()
+    return Response(frame, content_type='image/jpeg')
+
+@app.route('/get_maf_image', methods=['GET'])
+def get_most_activated_filter_image():
+    ret, buffer = cv2.imencode('.jpg', most_activated_filter_image)
+    frame = buffer.tobytes()
+    return Response(frame, content_type='image/jpeg')
+
+@app.route('/get_mafl_image', methods=['GET'])
+def get_most_activated_filter_last_image():
+    ret, buffer = cv2.imencode('.jpg', most_activated_filter_last_image)
+    frame = buffer.tobytes()
+    return Response(frame, content_type='image/jpeg')
+
+@app.route('/get_heatmap_image', methods=['GET'])
+def get_heatmap_image():
+    ret, buffer = cv2.imencode('.jpg', heatmap_image)
+    frame = buffer.tobytes()
+    return Response(frame, content_type='image/jpeg')
 
 if __name__ == '__main__':
     app.run(debug=True)
