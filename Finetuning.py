@@ -32,7 +32,7 @@ best_butch = 0
 best_lr = 0
 
 # Extract number of classes
-classes = 'Data/Labels.txt' 
+classes = 'Data/labels_en.txt'
 num_classes = 0
 with open(classes, 'r') as file:
     for line in file:

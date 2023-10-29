@@ -35,9 +35,9 @@ app = Flask(__name__, template_folder='templates')
 
 def construct_subclass_group_dict():
     labels = {}
-    path_to_labels = 'Data/Labels.txt'
+    path_to_labels = 'Data/labels_de.txt'
 
-    with open(path_to_labels, 'r') as file:
+    with open(path_to_labels, 'r', encoding='utf-8') as file:
         for line_number, line in enumerate(file, 0):
             labels[line_number] = line.strip()
     return labels
