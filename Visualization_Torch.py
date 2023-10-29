@@ -6,7 +6,7 @@ from flask import Flask, Response, render_template, jsonify
 import torchvision.transforms as transforms
 import torch
 import time
-import lucent.modelzoo 
+import lucent.modelzoo
 from lucent.modelzoo import inceptionv1
 from lucent.optvis import render, param, transform, objectives
 from lucent.misc.io import show
@@ -14,15 +14,15 @@ import pandas
 import matplotlib.pyplot as plt
 
 num_classes = 15
-image_size = 720 # Size of images (original, heatmap and act.layers)
-bright = 3.0 # How bright is the Heatmap
+image_size = 720  # Size of images (original, heatmap and act.layers)
+bright = 3.0  # How bright is the Heatmap
 alpha = 0.5  # Adjust the alpha value to control the intensity of the heatmap overlay
-space_between_pictures = 200 # Space between orig.image, filters and heatmap
-whitespace = 200 # height of the space for the text
-font_scale = 2.0 # Font scale
-thickness = 2 # Font thickness
-text_place = (10, 800) # Coordinates for the text
-text_colour = (255, 0, 0) # Colour of the text
+space_between_pictures = 200  # Space between orig.image, filters and heatmap
+whitespace = 200  # height of the space for the text
+font_scale = 2.0  # Font scale
+thickness = 2  # Font thickness
+text_place = (10, 800)  # Coordinates for the text
+text_colour = (255, 0, 0)  # Colour of the text
 predictions = []
 
 # Initialize as white image
@@ -32,6 +32,7 @@ most_activated_filter_image = white_image
 most_activated_filter_last_image = white_image
 heatmap_image = white_image
 app = Flask(__name__, template_folder='templates')
+
 
 def construct_subclass_group_dict():
     labels = {}
@@ -44,24 +45,27 @@ def construct_subclass_group_dict():
 
 
 def generate_frames():
-
     # Load the labels
     class_labels = construct_subclass_group_dict()
     num_classes = len(class_labels)
     # Disable scientific notation for clarity
 
     activation = {}
+
     def get_activation(name):
         def hook(model, input, output):
             activation[name] = output.detach()
+
         return hook
-    
+
     layer_output = None
+
     def hook_fn(module, input, output):
         nonlocal layer_output
         layer_output = output
 
     layer_output_last = None
+
     def hook_fn_last(module, input, output):
         nonlocal layer_output_last
         layer_output_last = output
@@ -101,7 +105,7 @@ def generate_frames():
     # CAMERA 
     camera = cv2.VideoCapture(0)
     while True:
-        # Grab the webcamera's image.
+        # Grab the webcam image
         ret, image = camera.read()
         input_tensor = preprocess(image)
 
@@ -122,7 +126,7 @@ def generate_frames():
         most_activated_filter_last = int(most_activated_filter_last)
         most_act_layer_last = cv2.imread(f'visualisations/400/mixed5b/{most_activated_filter_last}.jpg')
         most_act_layer_last = cv2.resize(most_act_layer_last, (image_size, image_size))
-        
+
         # Concat activations of conv layers for the heatmap
         concat_cn = torch.cat((activation['1st'], activation['2nd'], activation['3rd'], activation['4th']), dim=1)
 
@@ -137,32 +141,36 @@ def generate_frames():
         prediction_score_3 = prediction[0][top3[2].item()]
 
         # Building Heatmap
-        result_heatmap = concat_cn * model.softmax2_pre_activation_matmul.weight.data[predicted_class].view(1, 1024, 1, 1) # 1024 - input to the last FC layer
+        result_heatmap = concat_cn * model.softmax2_pre_activation_matmul.weight.data[predicted_class].view(1, 1024, 1, 1)  # 1024 - input to the last FC layer
         result_heatmap = result_heatmap.squeeze()
-        result_heatmap = torch.relu(result_heatmap) / torch.max(result_heatmap) # Normalisation
+        result_heatmap = torch.relu(result_heatmap) / torch.max(result_heatmap)  # Normalisation
         result_heatmap = result_heatmap.numpy()
         result_heatmap = np.sum(result_heatmap, axis=0)
         result_heatmap = cv2.resize(result_heatmap, (image_size, image_size))
-        result_heatmap = result_heatmap * bright # make heatmap more bright
+        result_heatmap = result_heatmap * bright  # make heatmap more bright
         heatmap_colormap = cv2.applyColorMap(np.uint8(result_heatmap), cv2.COLORMAP_JET)
 
         # Combine Heatmap and Actual Image
         combined_image = cv2.addWeighted(image, 1 - alpha, heatmap_colormap, alpha, 0)
 
+        # Save predictions and images in global variables, so they can be fetched with javascript
         results = [f"{class_name_1} | {str(np.round(prediction_score_1.item() * 100, decimals=2))}%",
                    f"{class_name_2} | {str(np.round(prediction_score_2.item() * 100, decimals=2))}%",
                    f"{class_name_3} | {str(np.round(prediction_score_3.item() * 100, decimals=2))}%"]
         set_predictions(results)
         set_images(image, most_act_layer, most_act_layer_last, combined_image)
 
+        # Return webcam image
         ret, buffer = cv2.imencode('.jpg', image)
         frame = buffer.tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
+
 def set_predictions(results):
     global predictions
     predictions = results
+
 
 def set_images(image, maf_image, mafl_image, heatmap):
     global camera_image
@@ -174,17 +182,21 @@ def set_images(image, maf_image, mafl_image, heatmap):
     global heatmap_image
     heatmap_image = heatmap
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/video_feed')
 def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+
 @app.route('/get_predictions', methods=['GET'])
 def get_predictions():
     return jsonify(data=predictions)
+
 
 @app.route('/get_camera_image', methods=['GET'])
 def get_camera_image():
@@ -192,11 +204,13 @@ def get_camera_image():
     frame = buffer.tobytes()
     return Response(frame, content_type='image/jpeg')
 
+
 @app.route('/get_maf_image', methods=['GET'])
 def get_most_activated_filter_image():
     ret, buffer = cv2.imencode('.jpg', most_activated_filter_image)
     frame = buffer.tobytes()
     return Response(frame, content_type='image/jpeg')
+
 
 @app.route('/get_mafl_image', methods=['GET'])
 def get_most_activated_filter_last_image():
@@ -204,11 +218,13 @@ def get_most_activated_filter_last_image():
     frame = buffer.tobytes()
     return Response(frame, content_type='image/jpeg')
 
+
 @app.route('/get_heatmap_image', methods=['GET'])
 def get_heatmap_image():
     ret, buffer = cv2.imencode('.jpg', heatmap_image)
     frame = buffer.tobytes()
     return Response(frame, content_type='image/jpeg')
+
 
 if __name__ == '__main__':
     app.run(debug=True)
