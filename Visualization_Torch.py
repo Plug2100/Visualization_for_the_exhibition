@@ -1,36 +1,24 @@
+import cv2
 import numpy as np
 import torch
-import cv2
 import torch.nn as nn
-from flask import Flask, Response, render_template, jsonify
 import torchvision.transforms as transforms
-import torch
-import time
-import lucent.modelzoo
+from flask import Flask, Response, render_template, jsonify
 from lucent.modelzoo import inceptionv1
-from lucent.optvis import render, param, transform, objectives
-from lucent.misc.io import show
-import pandas
-import matplotlib.pyplot as plt
 
 num_classes = 15
 image_size = 720  # Size of images (original, heatmap and act.layers)
 bright = 3.0  # How bright is the Heatmap
 alpha = 0.5  # Adjust the alpha value to control the intensity of the heatmap overlay
-space_between_pictures = 200  # Space between orig.image, filters and heatmap
-whitespace = 200  # height of the space for the text
-font_scale = 2.0  # Font scale
-thickness = 2  # Font thickness
-text_place = (10, 800)  # Coordinates for the text
-text_colour = (255, 0, 0)  # Colour of the text
 predictions = []
 
 # Initialize as white image
-white_image = np.ones((image_size, space_between_pictures, 3), dtype=np.uint8) * 255
+white_image = np.ones((image_size, image_size, 3), dtype=np.uint8) * 255
 camera_image = white_image
 most_activated_filter_image = white_image
 most_activated_filter_last_image = white_image
 heatmap_image = white_image
+
 app = Flask(__name__, template_folder='templates')
 
 
