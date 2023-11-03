@@ -59,6 +59,28 @@ col {
     padding: 10px;
     text-align: center;
     min-width: 224px;
+    font-size: 20px;
+}
+
+.prediction-class {
+    padding: 5px 5px 5px 20px;
+    text-align: center;
+    vertical-align: bottom;
+}
+
+.prediction-score {
+    border-right: 2px solid black;
+    padding: 5px 20px 5px 5px;
+    text-align: right;
+    vertical-align: middle;
+}
+
+.prediction-top {
+    font-weight: bold;
+}
+
+.prediction-top .prediction-score {
+    border-right: 3px solid black;
 }
 
 .row {

@@ -10,7 +10,7 @@ num_classes = 15
 image_size = 720  # Size of images (original, heatmap and act.layers)
 bright = 3.0  # How bright is the Heatmap
 alpha = 0.5  # Adjust the alpha value to control the intensity of the heatmap overlay
-predictions = []
+predictions = {}
 
 # Initialize as white image
 white_image = np.ones((image_size, image_size, 3), dtype=np.uint8) * 255
@@ -22,9 +22,9 @@ heatmap_image = white_image
 app = Flask(__name__, template_folder='templates')
 
 
-def construct_subclass_group_dict():
+def construct_subclass_group_dict(lang):
     labels = {}
-    path_to_labels = 'Data/labels_de.txt'
+    path_to_labels = 'Data/labels_de.txt' if lang == 'de' else 'Data/labels_en.txt'
 
     with open(path_to_labels, 'r', encoding='utf-8') as file:
         for line_number, line in enumerate(file, 0):
@@ -34,8 +34,10 @@ def construct_subclass_group_dict():
 
 def generate_frames():
     # Load the labels
-    class_labels = construct_subclass_group_dict()
-    num_classes = len(class_labels)
+    class_labels_de = construct_subclass_group_dict('de')
+    class_labels_en = construct_subclass_group_dict('en')
+
+    num_classes = len(class_labels_de)
     # Disable scientific notation for clarity
 
     activation = {}
@@ -91,7 +93,7 @@ def generate_frames():
 
     print(torch.__version__)
     # CAMERA 
-    camera = cv2.VideoCapture(0)
+    camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     while True:
         # Grab the webcam image
         ret, image = camera.read()
@@ -118,15 +120,9 @@ def generate_frames():
         # Concat activations of conv layers for the heatmap
         concat_cn = torch.cat((activation['1st'], activation['2nd'], activation['3rd'], activation['4th']), dim=1)
 
-        # Receive answer from the model
+        # Get predictions from model
         predicted_class = torch.argmax(prediction, dim=1).item()
         top3 = torch.topk(prediction.flatten(), 3).indices
-        class_name_1 = class_labels[top3[0].item()]
-        class_name_2 = class_labels[top3[1].item()]
-        class_name_3 = class_labels[top3[2].item()]
-        prediction_score_1 = prediction[0][top3[0].item()]
-        prediction_score_2 = prediction[0][top3[1].item()]
-        prediction_score_3 = prediction[0][top3[2].item()]
 
         # Building Heatmap
         result_heatmap = concat_cn * model.softmax2_pre_activation_matmul.weight.data[predicted_class].view(1, 1024, 1, 1)  # 1024 - input to the last FC layer
@@ -142,10 +138,14 @@ def generate_frames():
         combined_image = cv2.addWeighted(image, 1 - alpha, heatmap_colormap, alpha, 0)
 
         # Save predictions and images in global variables, so they can be fetched with javascript
-        results = [f"{class_name_1} | {str(np.round(prediction_score_1.item() * 100, decimals=2))}%",
-                   f"{class_name_2} | {str(np.round(prediction_score_2.item() * 100, decimals=2))}%",
-                   f"{class_name_3} | {str(np.round(prediction_score_3.item() * 100, decimals=2))}%"]
-        set_predictions(results)
+        prediction_scores = [f"{str(np.round(prediction[0][top3[0].item()].item() * 100, decimals=2))}%",
+                             f"{str(np.round(prediction[0][top3[1].item()].item() * 100, decimals=2))}%",
+                             f"{str(np.round(prediction[0][top3[2].item()].item() * 100, decimals=2))}%"]
+        predicted_classes = [f"{class_labels_de[top3[0].item()]} <br> ({class_labels_en[top3[0].item()]})",
+                             f"{class_labels_de[top3[1].item()]} <br> ({class_labels_en[top3[1].item()]})",
+                             f"{class_labels_de[top3[2].item()]} <br> ({class_labels_en[top3[2].item()]})"]
+        prediction_dict = {"scores": prediction_scores, "classes": predicted_classes}
+        set_predictions(prediction_dict)
         set_images(image, most_act_layer, most_act_layer_last, combined_image)
 
         # Return webcam image

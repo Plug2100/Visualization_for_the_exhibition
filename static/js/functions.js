@@ -4,9 +4,12 @@ function updatePredictions() {
         .then(response => response.json())
         .then(data => {
             // Update the HTML content with the fetched data
-            document.getElementById('prediction-1').textContent = data.data[0];
-            document.getElementById('prediction-2').textContent = data.data[1];
-            document.getElementById('prediction-3').textContent = data.data[2];
+            document.getElementById('prediction-score-1').innerHTML = data.data.scores[0];
+            document.getElementById('prediction-score-2').innerHTML = data.data.scores[1];
+            document.getElementById('prediction-score-3').innerHTML = data.data.scores[2];
+            document.getElementById('prediction-class-1').innerHTML = data.data.classes[0];
+            document.getElementById('prediction-class-2').innerHTML = data.data.classes[1];
+            document.getElementById('prediction-class-3').innerHTML = data.data.classes[2];
         })
         .catch(error => {
             console.error('Error fetching data:', error);
