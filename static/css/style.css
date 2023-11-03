@@ -12,7 +12,7 @@ col {
 }
 
 .col-arrow {
-    width: 5%;
+    width: 2.5%;
 }
 
 .footer {
@@ -57,6 +57,7 @@ col {
 
 .predictions {
     padding: 10px;
+    font-size: 20px;
     text-align: center;
     min-width: 224px;
     font-size: 20px;

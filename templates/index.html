@@ -25,58 +25,56 @@
             <col span="1">
             <col span="1" class="col-arrow">
             <col span="1">
+            <col span="1" class="col-arrow">
+            <col span="1">
             <col span="1">
         </colgroup>
 
         <tbody>
             <tr class="table-headline">
-                <th>Live Webcam</th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-            </tr>
-            <tr>
-                <th>
-                    <img class="image" src="{{url_for('video_feed')}}" alt="Original Image">
-                </th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-            </tr>
-            <tr class="table-headline">
                 <th>Eingabe</th>
                 <th></th>
                 <th>Niedrige Schicht</th>
                 <th></th>
+                <th>Mittlere Schicht</th>
+                <th></th>
                 <th>Höhere Schicht</th>
                 <th></th>
                 <th>Ausgabe</th>
-                <th>Klassifizierungsfokus</th>
+                <th>Fokus</th>
             </tr>
             <tr class="table-subheadline">
                 <th>(Input)</th>
                 <th></th>
                 <th>(Lower Layer)</th>
                 <th></th>
+                <th>(Middle Layer)</th>
+                <th></th>
                 <th>(Higher Layer)</th>
                 <th></th>
                 <th>(Output)</th>
-                <th>(Classification Focus)</th>
+                <th>(Focus)</th>
+            </tr>
+            <tr>
+                <td></td>
+                <td></td>
+                <td><img class="image" id="mixed3a_1_image" alt="Lower Layer 1"></td>
+                <td><img class="arrow" src="../static/img/arrow.png"></td>
+                <td><img class="image" id="mixed4b_1_image" alt="Middle Layer 1"></td>
+                <td><img class="arrow" src="../static/img/arrow.png"></td>
+                <td><img class="image" id="mixed5b_1_image" alt="Higher Layer 1"></td>
+                <td></td>
+                <td></td>
+                <td></td>
             </tr>
             <tr>
                 <td><img class="image" id="camera_image" alt="Camera Image"></td>
                 <td><img class="arrow" src="../static/img/arrow.png"></td>
-                <td><img class="image" id="maf_image" alt="Lower Layer"></td>
+                <td><img class="image" id="mixed3a_2_image" alt="Lower Layer 2"></td>
                 <td><img class="arrow" src="../static/img/arrow.png"></td>
-                <td><img class="image" id="mafl_image" alt="Higher Layer"></td>
+                <td><img class="image" id="mixed4b_2_image" alt="Middle Layer 2"></td>
+                <td><img class="arrow" src="../static/img/arrow.png"></td>
+                <td><img class="image" id="mixed5b_2_image" alt="Higher Layer 2"></td>
                 <td><img class="arrow" src="../static/img/arrow.png"></td>
                 <td class="predictions">
                     <table>
@@ -95,6 +93,18 @@
                     </table>
                 </td>
                 <td><img class="image" id="heatmap_image" alt="Classification Focus"></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td></td>
+                <td><img class="image" id="mixed3a_3_image" alt="Lower Layer 3"></td>
+                <td><img class="arrow" src="../static/img/arrow.png"></td>
+                <td><img class="image" id="mixed4b_3_image" alt="Middle Layer 3"></td>
+                <td><img class="arrow" src="../static/img/arrow.png"></td>
+                <td><img class="image" id="mixed5b_3_image" alt="Higher Layer 3"></td>
+                <td></td>
+                <td></td>
+                <td></td>
             </tr>
         </tbody>
     </table>

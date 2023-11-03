@@ -10,14 +10,12 @@ num_classes = 15
 image_size = 720  # Size of images (original, heatmap and act.layers)
 bright = 3.0  # How bright is the Heatmap
 alpha = 0.5  # Adjust the alpha value to control the intensity of the heatmap overlay
+layers = ['mixed3a', 'mixed4b', 'mixed5b']
+num_filters_per_layer = 3
 predictions = {}
-
-# Initialize as white image
 white_image = np.ones((image_size, image_size, 3), dtype=np.uint8) * 255
-camera_image = white_image
-most_activated_filter_image = white_image
-most_activated_filter_last_image = white_image
-heatmap_image = white_image
+imageTypes = ['camera', 'heatmap', 'mixed3a_1', 'mixed3a_2', 'mixed3a_3', 'mixed4b_1', 'mixed4b_2', 'mixed4b_3', 'mixed5b_1', 'mixed5b_2', 'mixed5b_3']
+global_images = {imgType: white_image for imgType in imageTypes}
 
 app = Flask(__name__, template_folder='templates')
 
@@ -48,18 +46,6 @@ def generate_frames():
 
         return hook
 
-    layer_output = None
-
-    def hook_fn(module, input, output):
-        nonlocal layer_output
-        layer_output = output
-
-    layer_output_last = None
-
-    def hook_fn_last(module, input, output):
-        nonlocal layer_output_last
-        layer_output_last = output
-
     # Load the model
     model = inceptionv1(pretrained=False)
 
@@ -71,13 +57,13 @@ def generate_frames():
 
     model.eval()
 
-    # List of hooks for max activations (first and last layer)
-    desired_layer = model.mixed3a
-    hook = desired_layer.register_forward_hook(hook_fn)
-    desired_layer_last = model.mixed5b
-    hook_last = desired_layer_last.register_forward_hook(hook_fn_last)
+    # Set hooks for intermediate layer visualization
+    model.mixed3a.register_forward_hook(get_activation('mixed3a'))
+    model.mixed4b.register_forward_hook(get_activation('mixed4b'))
+    model.mixed5b.register_forward_hook(get_activation('mixed5b'))
 
     # List of layers that are inputs to the pooling layer - may be can be done by calling model.mixed5b instead of all this
+    # Set hooks for class activation mapping (CAM) of the last layer
     model.mixed5b_1x1_pre_relu_conv.register_forward_hook(get_activation('1st'))
     model.mixed5b_3x3_pre_relu_conv.register_forward_hook(get_activation('2nd'))
     model.mixed5b_5x5_pre_relu_conv.register_forward_hook(get_activation('3rd'))
@@ -100,22 +86,25 @@ def generate_frames():
         input_tensor = preprocess(image)
 
         image = cv2.resize(image, (image_size, image_size), interpolation=cv2.INTER_AREA)
+        images = {'camera': image}
+
         # Add a batch dimension (GoogleNet expects batched input)
         input_tensor = input_tensor.unsqueeze(0)
         with torch.no_grad():
             prediction = model(input_tensor)
 
-        # Find the most activated filter in the layer
-        most_activated_filter = layer_output.mean(dim=(0, 2, 3)).argmax()
-        most_activated_filter = int(most_activated_filter)
-        most_act_layer = cv2.imread(f'visualisations/400/mixed3a/{most_activated_filter}.jpg')
-        most_act_layer = cv2.resize(most_act_layer, (image_size, image_size))
+        def get_nth_most_activated_filter(layer, n):
+            # Find the n-th most activated filter in the layer
+            activations = activation[layer].mean(dim=(0, 2, 3))
+            indices = np.argpartition(activations, kth=-n)
+            filter_image = cv2.imread(f'visualisations/400/{layer}/{indices[-n]}.jpg')
+            filter_image = cv2.resize(filter_image, (image_size, image_size))
+            return filter_image
 
-        # Find the most activated filter in the layer last
-        most_activated_filter_last = layer_output_last.mean(dim=(0, 2, 3)).argmax()
-        most_activated_filter_last = int(most_activated_filter_last)
-        most_act_layer_last = cv2.imread(f'visualisations/400/mixed5b/{most_activated_filter_last}.jpg')
-        most_act_layer_last = cv2.resize(most_act_layer_last, (image_size, image_size))
+        # Get most activated filters
+        for layer in layers:
+            for i in range(1, num_filters_per_layer + 1):
+                images[f'{layer}_{i}'] = get_nth_most_activated_filter(layer, i)
 
         # Concat activations of conv layers for the heatmap
         concat_cn = torch.cat((activation['1st'], activation['2nd'], activation['3rd'], activation['4th']), dim=1)
@@ -124,7 +113,7 @@ def generate_frames():
         predicted_class = torch.argmax(prediction, dim=1).item()
         top3 = torch.topk(prediction.flatten(), 3).indices
 
-        # Building Heatmap
+        # Building heatmap
         result_heatmap = concat_cn * model.softmax2_pre_activation_matmul.weight.data[predicted_class].view(1, 1024, 1, 1)  # 1024 - input to the last FC layer
         result_heatmap = result_heatmap.squeeze()
         result_heatmap = torch.relu(result_heatmap) / torch.max(result_heatmap)  # Normalisation
@@ -134,8 +123,9 @@ def generate_frames():
         result_heatmap = result_heatmap * bright  # make heatmap more bright
         heatmap_colormap = cv2.applyColorMap(np.uint8(result_heatmap), cv2.COLORMAP_JET)
 
-        # Combine Heatmap and Actual Image
+        # Combine heatmap and actual image
         combined_image = cv2.addWeighted(image, 1 - alpha, heatmap_colormap, alpha, 0)
+        images['heatmap'] = combined_image
 
         # Save predictions and images in global variables, so they can be fetched with javascript
         prediction_scores = [f"{str(np.round(prediction[0][top3[0].item()].item() * 100, decimals=2))}%",
@@ -146,7 +136,7 @@ def generate_frames():
                              f"{class_labels_de[top3[2].item()]} <br> ({class_labels_en[top3[2].item()]})"]
         prediction_dict = {"scores": prediction_scores, "classes": predicted_classes}
         set_predictions(prediction_dict)
-        set_images(image, most_act_layer, most_act_layer_last, combined_image)
+        set_images(images)
 
         # Return webcam image
         ret, buffer = cv2.imencode('.jpg', image)
@@ -160,15 +150,10 @@ def set_predictions(results):
     predictions = results
 
 
-def set_images(image, maf_image, mafl_image, heatmap):
-    global camera_image
-    camera_image = image
-    global most_activated_filter_image
-    most_activated_filter_image = maf_image
-    global most_activated_filter_last_image
-    most_activated_filter_last_image = mafl_image
-    global heatmap_image
-    heatmap_image = heatmap
+def set_images(images):
+    global global_images
+    for key in images.keys():
+        global_images[key] = images[key]
 
 
 @app.route('/')
@@ -186,30 +171,9 @@ def get_predictions():
     return jsonify(data=predictions)
 
 
-@app.route('/get_camera_image', methods=['GET'])
-def get_camera_image():
-    ret, buffer = cv2.imencode('.jpg', camera_image)
-    frame = buffer.tobytes()
-    return Response(frame, content_type='image/jpeg')
-
-
-@app.route('/get_maf_image', methods=['GET'])
-def get_most_activated_filter_image():
-    ret, buffer = cv2.imencode('.jpg', most_activated_filter_image)
-    frame = buffer.tobytes()
-    return Response(frame, content_type='image/jpeg')
-
-
-@app.route('/get_mafl_image', methods=['GET'])
-def get_most_activated_filter_last_image():
-    ret, buffer = cv2.imencode('.jpg', most_activated_filter_last_image)
-    frame = buffer.tobytes()
-    return Response(frame, content_type='image/jpeg')
-
-
-@app.route('/get_heatmap_image', methods=['GET'])
-def get_heatmap_image():
-    ret, buffer = cv2.imencode('.jpg', heatmap_image)
+@app.route('/get_image/<key>', methods=['GET'])
+def get_image(key):
+    ret, buffer = cv2.imencode('.jpg', global_images[key])
     frame = buffer.tobytes()
     return Response(frame, content_type='image/jpeg')
 
