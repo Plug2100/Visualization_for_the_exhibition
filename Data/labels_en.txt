@@ -1,13 +1,19 @@
 Apple
+Banana
 Bulb
+Cash
 Cup
+Hand
 Horse
+Key
+Lightet
 Pen
 Phone
 Pop Bottle
 Postcard
 Scissor
 Spider
+Tissues
 Toothbrush
 Wallet
 Watch

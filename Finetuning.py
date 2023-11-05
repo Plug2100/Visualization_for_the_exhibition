@@ -3,6 +3,7 @@ import torch
 from torchvision import datasets, transforms
 import torch.nn as nn
 from lucent.modelzoo import inceptionv1
+from sklearn.metrics import confusion_matrix
 import copy
 
 
@@ -108,6 +109,9 @@ for lr in [0.1, 0.01, 0.001]:
 best_model.eval()
 correct = 0
 total = 0
+all_predicted = []
+all_labels = []
+
 with torch.no_grad():
     for inputs, labels in eval_dataloader:
         inputs, labels = inputs.to(device), labels.to(device)
@@ -115,10 +119,21 @@ with torch.no_grad():
         _, predicted = torch.max(outputs, 1)
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
+        
+        all_predicted.extend(predicted.cpu().numpy())
+        all_labels.extend(labels.cpu().numpy())
 
-# Calculate accuracy
+# Calculate overall accuracy
 accuracy = 100 * correct / total
-print(f'Best accuracy: {accuracy:.2f}%')
+print(f'Overall accuracy: {accuracy:.2f}%')
+
+# Calculate class-wise accuracy
+confusion = confusion_matrix(all_labels, all_predicted)
+class_accuracy = 100 * confusion.diagonal() / confusion.sum(1)
+
+for i, acc in enumerate(class_accuracy):
+    print(f'Accuracy for class {i}: {acc:.2f}%')
+
 
 num_epochs = 5
 best_model.train()
