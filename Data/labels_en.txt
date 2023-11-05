@@ -6,7 +6,7 @@ Cup
 Hand
 Horse
 Key
-Lightet
+Lighter
 Pen
 Phone
 Pop Bottle
