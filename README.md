@@ -41,7 +41,7 @@ The interface consists of the following parts:
       ```
       pip install torch-lucent
       ```
-   3. Install flask
+   3. Install opencv
       ```
       pip install opencv-python
       ```
