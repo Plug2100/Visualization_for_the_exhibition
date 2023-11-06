@@ -1,6 +1,6 @@
 # CIDAS exhibition project
 This project was developed for the [CIDAS exhibition](https://www.uni-goettingen.de/en/679751.html) on the 7th and 8th of November 2023 in Göttingen (Germany). 
-The topic of the exhibition was “KI & Data Science entdecken” (Discover AI and Data Science). The project visualizes how a neural network classifies images.
+The topic of the exhibition was “KI & Data Science entdecken” (Experiencing AI and Data Science). The project visualizes how a neural network classifies images.
 
 ![Prototype Interface](interface_screenshot.png)
 
@@ -13,8 +13,8 @@ The interface consists of the following parts:
 - Classification focus: Class Activation Mapping (CAM) highlights on which part of the image the network was focused the most for its prediction
 
 **Technical Description**
-- Classes: There are 15 classes (see Data/labels_de.txt). The focus was put on objects that people would normally carry around while being at an exhibition and was extended by objects provided from us
-- Model: We adapted the model Inception V1 which originally classified all 1000 classes from ImageNet. We replaced the last layer to classify only our 15 classes of interest
+- Classes: There are 21 classes (see Data/labels_de.txt). The focus was put on objects that people would normally carry around while being at an exhibition and was extended by objects provided from us. In consideration of the case when no object is presented to the camera, we also added a background class
+- Model: We adapted the model Inception V1 which originally classified all 1000 classes from ImageNet. We replaced the last layer to classify only our 21 classes of interest
 - Data: With our objects at hand, we generated our own data to train the last layer. We used 90 samples for training and 10 for evaluation. They can be found in the data folder. We also used images from ImageNet to retrain the last layer, so that the model generalizes better
 
 **Prerequisites**
@@ -40,6 +40,10 @@ The interface consists of the following parts:
    2. Install lucent
       ```
       pip install torch-lucent
+      ```
+   3. Install flask
+      ```
+      pip install opencv-python
       ```
    3. Install flask
       ```
