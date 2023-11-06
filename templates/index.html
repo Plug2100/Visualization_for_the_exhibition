@@ -9,10 +9,7 @@
 
 <body>
     <div class="header">
-        <div class="headline">
-            <h1>Bildklassifizierung</h1>
-            <p>(Image Classification)</p>
-        </div>
+        <p class="headline">Bildklassifizierung (Image Classification)</p>
         <img src="{{url_for('static', filename='img/uni_goettingen_logo.svg')}}" alt="Uni Goettingen Logo">
     </div>
 
@@ -26,7 +23,7 @@
             <col span="1" class="col-arrow">
             <col span="1">
             <col span="1" class="col-arrow">
-            <col span="1">
+            <col span="1" class="col-prediction">
             <col span="1">
         </colgroup>
 
@@ -110,8 +107,17 @@
     </table>
 
     <div class="footer">
-        <img src="{{url_for('static', filename='img/gipplab_logo.png')}}" alt="Uni Goettingen Logo" style="text-align: right;">
-        <img src="{{url_for('static', filename='img/cidas_logo.png')}}" alt="Uni Goettingen Logo">
+        <div>
+            <table>
+                <th>
+                    <td>
+                        <img src="{{url_for('static', filename='img/gipplab_logo.png')}}" alt="GippLab Logo">
+                    </td>
+                    <td>Presented by GippLab</td>
+                </th>
+            </table>
+        </div>
+        <img src="{{url_for('static', filename='img/cidas_logo.png')}}" alt="Cidas Logo">
     </div>
 </body>
 </html>

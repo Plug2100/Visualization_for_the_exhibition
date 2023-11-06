@@ -1,54 +1,69 @@
 .arrow {
-    height: 50px;
-    padding: 10px;
+    height: 25px;
+    padding: 5px;
 }
 
 body {
     font-family: 'Archivo', serif;
+    margin: 0;
+    padding: 0;
+    display:flex;
+    flex-direction:column;
+    min-height: 100vh;
+    max-height: 100vh;
 }
 
 col {
-    width: 15%;
+    width: 14%;
 }
 
 .col-arrow {
     width: 2.5%;
 }
 
+.col-prediction {
+    width: 15%;
+    min-width: 15%;
+    max-width: 15%;
+}
+
 .footer {
     background-color: #d4d4ce;
-    padding: 20px;
+    padding: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 20px;
+    margin-top: 10px;
 }
 
 .footer img {
-    max-height: 100px;
+    max-height: 50px;
 }
 
 .header {
     background-color: #1d5ca8;
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: 10px;
+    margin-bottom: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
 .header img {
-    max-height: 100px;
+    max-height: 50px;
 }
 
 .headline {
-    padding: 5px;
+    font-weight: bold;
+    font-size: 28px;
     color: white;
+    margin: 0;
+    padding: 15px 15px 15px 20px;
 }
 
 .image {
-    max-width: 100%;
-    max-height: 100%;
+    max-width: 95%;
+    max-height: 95%;
 }
 
 .logo {
@@ -56,11 +71,8 @@ col {
 }
 
 .predictions {
-    padding: 10px;
-    font-size: 20px;
     text-align: center;
-    min-width: 224px;
-    font-size: 20px;
+    min-width: 260px;
 }
 
 .prediction-class {
@@ -89,16 +101,21 @@ col {
 }
 
 table {
-    border-spacing: 0 15px;
-    padding: 20px;
+    padding-left: 10px;
+    padding-right: 10px;
+    flex: 1;
 }
 
 .table-headline {
-   font-size: 22px;
+   font-size: 20px;
 }
 
 .table-subheadline {
    font-size: 16px;
+}
+
+.table-subheadline th {
+   padding-bottom: 10px;
 }
 
 td {

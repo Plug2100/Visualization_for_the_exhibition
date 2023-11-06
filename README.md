@@ -2,10 +2,9 @@
 This project was developed for the [CIDAS exhibition](https://www.uni-goettingen.de/en/679751.html) on the 7th and 8th of November 2023 in Göttingen (Germany). 
 The topic of the exhibition was “KI & Data Science entdecken” (Discover AI and Data Science). The project visualizes how a neural network classifies images.
 
-![Prototype Interface](Example.png)
+![Prototype Interface](interface_screenshot.png)
 
 The interface consists of the following parts:
-- Live webcam: Video stream of the webcam
 - Input camera image: Every 5 seconds, a snapshot from the webcam is taken and processed by the neural network
 - Intermediate Layers: This part shows representations of the filters which were activated the most by the input image. The representations show what an image would look like that would lead to a maximal activation of the specific filter
   - Looking at the representations of the higher layers, it is possible to find similarities between them and the input image
