@@ -55,6 +55,10 @@ The interface consists of the following parts:
    ```
 
 **Our setup at the exhibition**
-- Webcam: An external webcam which is directed on a white background to reduce any visual interferences 
-- Screen: The prototype will be shown on a SMART board (a digital whiteboard) with the size 65" or 84"
-- Objects: Some objects will be provided by us, but visitors are also allowed to place other objects before the camera
+- Webcam: An external webcam which was directed on a white background to reduce any visual interferences 
+- Screen: The prototype was shown on a SMART board (a digital whiteboard) with the size 75"
+- Objects: Some objects were provided by us, but visitors were also allowed to place other objects before the camera
+
+<p align="center" width="100%">
+  <img src="exhibition_setup_image.jpg" alt="Exhibition Setup" width="70%">
+</p>
