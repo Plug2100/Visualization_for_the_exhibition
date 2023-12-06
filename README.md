@@ -62,3 +62,8 @@ The interface consists of the following parts:
 <p align="center" width="100%">
   <img src="exhibition_setup_image.jpg" alt="Exhibition Setup" width="70%">
 </p>
+
+**Acknowledgement**
+
+Parts of this work were taken from the [Paprika project](https://github.com/Conzel/paprika) that was developed 
+for the Museum of Tübingen. We want to offer special thanks to Alexander Conzelmann who was open to a meeting to talk about their work.
